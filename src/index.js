@@ -1,5 +1,6 @@
 let nextUnitOfWork = null;
 let workInProgressRoot = null;
+let previousRoot = null;
 
 function createElement(type, props, ...children) {
   return {
@@ -35,16 +36,51 @@ function createDom(element) {
 
 function commitRoot() {
   commitWork(workInProgressRoot.child);
+  previousRoot = workInProgressRoot;
+  workInProgressRoot = null;
+
 }
 
 function commitWork(fiber) {
   if (!fiber) return;
   if (fiber.parent?.dom) {
-    fiber.parent.dom.appendChild(fiber.dom);
+    const domParent = fiber.parent.dom;
+    if (fiber.dom && fiber.effectTag === 'ADD') {
+      domParent.appendChild(fiber.dom);
+    }
+
+    if (fiber.effectTag === 'DELETE') {
+      domParent.removeChild(fiber.dom);
+    }
+
+    if (fiber.effectTag === 'UPDATE') {
+      updateDom(fiber.dom, fiber.previous.props, fiber.props);
+    }
   }
 
   commitWork(fiber.child);
   commitWork(fiber.sibling);
+}
+
+const isRemovedProp = (next) => key => !(key in next);
+const isNewProp = (prev, next) => key => !(key in prev) || prev[key] !== next[key];
+
+function updateDom(dom, prevProps, currentProps) {
+  Object.keys(currentProps)
+    .filter(isProperty)
+    .filter(isNewProp(prevProps, currentProps))
+    .forEach(key => {
+      dom[key] = currentProps[key];
+    });
+
+  Object.keys(prevProps)
+    .filter(isProperty)
+    .filter(isRemovedProp(currentProps))
+    .forEach(key => {
+      dom[key] = '';
+    });
+
+
 }
 
 function render(element, container) {
@@ -53,7 +89,8 @@ function render(element, container) {
     dom: container,
     props: {
       children: [element],
-    }
+    },
+    previous: previousRoot,
   }
 
   nextUnitOfWork = workInProgressRoot;
@@ -80,24 +117,9 @@ function performUnitOfWork(fiber) {
     fiber.dom = createDom(fiber);
   }
 
-  let prevSibling = null;
+  const elements = fiber.props.children;
 
-  fiber.props.children.forEach((child, index) => {
-    const newFiber = {
-      type: child.type,
-      props: child.props,
-      parent: fiber,
-      dom: null,
-    };
-
-    if (index === 0) {
-      fiber.child = newFiber;
-    } else {
-      prevSibling.sibling = newFiber;
-    }
-
-    prevSibling = newFiber;
-  });
+  reconcileElements(fiber, elements);  
 
   if (fiber.child) {
     return fiber.child;
@@ -110,6 +132,59 @@ function performUnitOfWork(fiber) {
 
     nextFiber = nextFiber.parent;
   }
+}
+
+function reconcileElements(fiber, elements) {
+
+  let prevSibling = null;
+
+  elements.forEach((child, index) => {
+
+    //reconcile with old fiber 
+    let oldFiber;
+
+    if (index === 0) {
+      oldFiber = fiber.previous?.child;
+    } else {
+      oldFiber = prevSibling.previous.sibling;
+    }
+    const sameType = oldFiber && child && oldFiber.type === child.type;
+
+    if (sameType) {
+      newFiber = {
+        type: child.type,
+        props: child.props,
+        parent: fiber,
+        dom: oldFiber.dom,
+        previous: oldFiber,
+        effectTag: 'UPDATE',
+      }
+    }
+
+    if (child && !sameType) {
+      newFiber = {
+        type: child.type,
+        props: child.props,
+        parent: fiber,
+        dom: null,
+        previous: oldFiber,
+        effectTag: 'ADD',
+      }
+    }
+
+    if (oldFiber && !sameType) {
+      newFiber.effectTag = 'DELETE';
+    }
+
+    if (index === 0) {
+      fiber.child = newFiber;
+    } else {
+      prevSibling.sibling = newFiber;
+    }
+
+    prevSibling = newFiber;
+
+  });
 }
 
 
