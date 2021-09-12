@@ -1,4 +1,5 @@
 let nextUnitOfWork = null;
+let workInProgressRoot = null;
 
 function createElement(type, props, ...children) {
   return {
@@ -32,14 +33,30 @@ function createDom(element) {
   return dom;
 }
 
+function commitRoot() {
+  commitWork(workInProgressRoot.child);
+}
+
+function commitWork(fiber) {
+  if (!fiber) return;
+  if (fiber.parent?.dom) {
+    fiber.parent.dom.appendChild(fiber.dom);
+  }
+
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
+}
+
 function render(element, container) {
 
-  nextUnitOfWork = {
+  workInProgressRoot = {
     dom: container,
     props: {
       children: [element],
     }
   }
+
+  nextUnitOfWork = workInProgressRoot;
 };
 
 function workLoop(deadline) {
@@ -52,6 +69,8 @@ function workLoop(deadline) {
   }
 
   requestIdleCallback(workLoop);
+
+  if (workInProgressRoot && !nextUnitOfWork) commitRoot();
 }
 
 requestIdleCallback(workLoop);
@@ -59,10 +78,6 @@ requestIdleCallback(workLoop);
 function performUnitOfWork(fiber) {
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
-  }
-
-  if (fiber.parent?.dom) {
-    fiber.parent.dom.appendChild(fiber.dom);
   }
 
   let prevSibling = null;
