@@ -23,8 +23,6 @@ function createTextElement(element) {
   };
 };
 
-const isProperty = prop => prop !== 'children';
-
 function createDom(element) {
   const dom = element.type === 'TEXT_ELEMENT' ? document.createTextNode("") : document.createElement(element.type);
 
@@ -63,6 +61,8 @@ function commitWork(fiber) {
   commitWork(fiber.sibling);
 }
 
+const isProperty = prop => prop !== 'children' && !prop.startsWith('on');
+const isEvent = prop => prop.startsWith('on');
 const isRemovedProp = (next) => key => !(key in next);
 const isNewProp = (prev, next) => key => !(key in prev) || prev[key] !== next[key];
 
@@ -81,7 +81,23 @@ function updateDom(dom, prevProps, currentProps) {
       dom[key] = '';
     });
 
+  //removed deleted or updated event listeners
+  Object.keys(prevProps)
+    .filter(isEvent)
+    .filter(isNewProp(prevProps, currentProps))
+    .forEach(event => {
+      const eventType = event.substring(2);
+      document.removeEventListener(eventType, prevProps[event]);
+    });
 
+  //add new or updated event listeners
+  Object.keys(currentProps)
+    .filter(isEvent)
+    .filter(isNewProp(prevProps, currentProps))
+    .forEach(event => {
+      const eventType = event.substring(2);
+      document.addEventListener(eventType, currentProps[event]);
+    });
 }
 
 function render(element, container) {
@@ -197,7 +213,7 @@ const CustomReact = {
 
 /** @jsx CustomReact.createElement */
 const element = (
-  <h1 title='main title'>
+  <h1 title='main title' onClick={() => alert("I was clicked")}>
     Hi
   </h1>
 );
