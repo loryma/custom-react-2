@@ -159,10 +159,42 @@ function performUnitOfWork(fiber) {
   }
 }
 
+let wipFiber = null;
+let hookIndex = null;
+
 function updateFunctionComponent(fiber) {
+  wipFiber = fiber;
+  hookIndex = 0;
+  wipFiber.hooks = [];
   const children = [fiber.type(fiber.props)];
 
   reconcileElements(fiber, children);
+}
+
+function useState(initial) {
+  const hook = wipFiber.previous?.hooks?.[hookIndex] || { state: initial, actions: [] };
+
+  hook.actions.forEach(action => {
+    hook.state = action(hook.state);
+  });
+
+  const setState = action => {
+    hook.actions.push(action);
+    workInProgressRoot = {
+      dom: previousRoot.dom,
+      props: previousRoot.props,
+      previous: previousRoot,
+    }
+
+    nextUnitOfWork = workInProgressRoot;
+    deletions = [];
+  }
+
+  wipFiber.hooks.push(hook);
+  hookIndex++;
+
+  return [hook.state, setState];
+
 }
 
 function updateFiber(fiber) {
@@ -187,7 +219,7 @@ function reconcileElements(fiber, elements) {
     if (index === 0) {
       oldFiber = fiber.previous?.child;
     } else {
-      oldFiber = prevSibling.previous.sibling;
+      oldFiber = prevSibling.previous?.sibling;
     }
     const sameType = oldFiber && child && oldFiber.type === child.type;
 
@@ -233,14 +265,16 @@ function reconcileElements(fiber, elements) {
 const CustomReact = {
   createElement,
   render,
+  useState,
 };
 
 /** @jsx CustomReact.createElement */
 function App({ title }) {
+  const [count, setCount] = useState(1);
   return (
-    <h1 title={title} onClick={() => alert("I was clicked")}>
-      Hi
-    </h1>
+    <button title={title} onClick={() => setCount(state => state + 1)}>
+      Counter: {count}
+    </button>
   );
 } 
 
