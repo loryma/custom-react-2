@@ -28,9 +28,7 @@ const isProperty = prop => prop !== 'children';
 function createDom(element) {
   const dom = element.type === 'TEXT_ELEMENT' ? document.createTextNode("") : document.createElement(element.type);
 
-  Object.keys(element.props)
-    .filter(isProperty)
-    .forEach(prop => dom[prop] = element.props[prop]);
+  updateDom(element, {}, element.props);
 
   return dom;
 }
