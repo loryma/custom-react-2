@@ -26,7 +26,7 @@ function createTextElement(element) {
 function createDom(element) {
   const dom = element.type === 'TEXT_ELEMENT' ? document.createTextNode("") : document.createElement(element.type);
 
-  updateDom(element, {}, element.props);
+  updateDom(dom, {}, element.props);
 
   return dom;
 }
