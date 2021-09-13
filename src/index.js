@@ -1,6 +1,7 @@
 let nextUnitOfWork = null;
 let workInProgressRoot = null;
 let previousRoot = null;
+let deletions = [];
 
 function createElement(type, props, ...children) {
   return {
@@ -35,9 +36,11 @@ function createDom(element) {
 }
 
 function commitRoot() {
+  deletions.forEach(commitWork);
   commitWork(workInProgressRoot.child);
   previousRoot = workInProgressRoot;
   workInProgressRoot = null;
+  deletions = [];
 
 }
 
@@ -173,7 +176,8 @@ function reconcileElements(fiber, elements) {
     }
 
     if (oldFiber && !sameType) {
-      newFiber.effectTag = 'DELETE';
+      oldFiber.effectTag = 'DELETE';
+      deletions.push(oldFiber);
     }
 
     if (index === 0) {
