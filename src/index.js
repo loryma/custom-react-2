@@ -42,19 +42,28 @@ function commitRoot() {
 
 function commitWork(fiber) {
   if (!fiber) return;
-  if (fiber.parent?.dom) {
-    const domParent = fiber.parent.dom;
-    if (fiber.dom && fiber.effectTag === 'ADD') {
-      domParent.appendChild(fiber.dom);
-    }
+  let parent = fiber.parent;
 
-    if (fiber.effectTag === 'DELETE') {
-      domParent.removeChild(fiber.dom);
-    }
+  while(!parent.dom) {
+    parent = parent.parent;
+  }
+  const domParent = parent.dom;
 
-    if (fiber.effectTag === 'UPDATE') {
-      updateDom(fiber.dom, fiber.previous.props, fiber.props);
+  if (fiber.dom && fiber.effectTag === 'ADD') {
+    domParent.appendChild(fiber.dom);
+  }
+
+  if (fiber.effectTag === 'DELETE') {
+    let child = fiber;
+
+    while (!child.dom) {
+      child = fiber.child
     }
+    domParent.removeChild(child.dom);
+  }
+
+  if (fiber.effectTag === 'UPDATE') {
+    updateDom(fiber.dom, fiber.previous.props, fiber.props);
   }
 
   commitWork(fiber.child);
@@ -130,13 +139,12 @@ function workLoop(deadline) {
 requestIdleCallback(workLoop);
 
 function performUnitOfWork(fiber) {
-  if (!fiber.dom) {
-    fiber.dom = createDom(fiber);
+  
+  if (fiber.type instanceof Function) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateFiber(fiber);
   }
-
-  const elements = fiber.props.children;
-
-  reconcileElements(fiber, elements);  
 
   if (fiber.child) {
     return fiber.child;
@@ -149,6 +157,22 @@ function performUnitOfWork(fiber) {
 
     nextFiber = nextFiber.parent;
   }
+}
+
+function updateFunctionComponent(fiber) {
+  const children = [fiber.type(fiber.props)];
+
+  reconcileElements(fiber, children);
+}
+
+function updateFiber(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber);
+  }
+
+  const elements = fiber.props.children;
+
+  reconcileElements(fiber, elements);  
 }
 
 function reconcileElements(fiber, elements) {
@@ -212,14 +236,16 @@ const CustomReact = {
 };
 
 /** @jsx CustomReact.createElement */
-const element = (
-  <h1 title='main title' onClick={() => alert("I was clicked")}>
-    Hi
-  </h1>
-);
+function App({ title }) {
+  return (
+    <h1 title={title} onClick={() => alert("I was clicked")}>
+      Hi
+    </h1>
+  );
+} 
 
 CustomReact.render(
-  element,
+  <App title="I am a title" />,
   document.querySelector('#root'),
 );
 
