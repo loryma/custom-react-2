@@ -86,7 +86,7 @@ function updateDom(dom, prevProps, currentProps) {
     .filter(isEvent)
     .filter(isNewProp(prevProps, currentProps))
     .forEach(event => {
-      const eventType = event.substring(2);
+      const eventType = event.toLowerCase().substring(2);
       document.removeEventListener(eventType, prevProps[event]);
     });
 
@@ -95,7 +95,7 @@ function updateDom(dom, prevProps, currentProps) {
     .filter(isEvent)
     .filter(isNewProp(prevProps, currentProps))
     .forEach(event => {
-      const eventType = event.substring(2);
+      const eventType = event.toLowerCase().substring(2);
       document.addEventListener(eventType, currentProps[event]);
     });
 }
