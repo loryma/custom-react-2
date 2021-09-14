@@ -172,14 +172,17 @@ function updateFunctionComponent(fiber) {
 }
 
 function useState(initial) {
-  const hook = wipFiber.previous?.hooks?.[hookIndex] || { state: initial, actions: [] };
+  const hook = wipFiber.previous?.hooks?.[hookIndex] || { state: initial };
 
-  hook.actions.forEach(action => {
-    hook.state = action(hook.state);
-  });
+  actionsShouldBeCalled = false;
 
-  const setState = action => {
-    hook.actions.push(action);
+  const setState = arg => {
+    if (arg instanceof Function) {
+      hook.state = arg(hook.state);
+    } else {
+      hook.state = arg;
+    }
+    
     workInProgressRoot = {
       dom: previousRoot.dom,
       props: previousRoot.props,
@@ -271,10 +274,14 @@ const CustomReact = {
 /** @jsx CustomReact.createElement */
 function App({ title }) {
   const [count, setCount] = useState(1);
+  const [text, setText] = useState('initial text');
   return (
-    <button title={title} onClick={() => setCount(state => state + 1)}>
-      Counter: {count}
-    </button>
+    <div>
+      <button title={title} onClick={() => setCount(state => state + 1)}>
+        Counter: {count}
+      </button>
+      <input value={text} onInput={({ target: { value }}) => setText(value)} />
+    </div>
   );
 } 
 
