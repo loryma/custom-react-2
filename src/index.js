@@ -153,7 +153,7 @@ function performUnitOfWork(fiber) {
   let nextFiber = fiber;
 
   while (nextFiber) {
-    if (fiber.sibling) return fiber.sibling;
+    if (nextFiber.sibling) return nextFiber.sibling;
 
     nextFiber = nextFiber.parent;
   }
@@ -213,17 +213,17 @@ function updateFiber(fiber) {
 function reconcileElements(fiber, elements) {
 
   let prevSibling = null;
+  let oldFiber;
+  let newFiber = null;
 
   elements.forEach((child, index) => {
-
-    //reconcile with old fiber 
-    let oldFiber;
 
     if (index === 0) {
       oldFiber = fiber.previous?.child;
     } else {
-      oldFiber = prevSibling.previous?.sibling;
+      oldFiber = oldFiber?.sibling;
     }
+
     const sameType = oldFiber && child && oldFiber.type === child.type;
 
     if (sameType) {
