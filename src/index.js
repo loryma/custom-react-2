@@ -8,7 +8,17 @@ function createElement(type, props, ...children) {
     type, 
     props: {
       ...props,
-      children: children.map( child => typeof child === 'object' ? child : createTextElement(child)),
+      children: children.reduce((acc, child) => {
+        if (typeof child === 'object') {
+          if (Array.isArray(child)) {
+            return acc.concat(child)
+          }
+          acc.push(child);
+        } else {
+          acc.push(createTextElement(child))
+        }
+        return acc;
+      }, []),
     }
   }
 }
@@ -96,7 +106,7 @@ function updateDom(dom, prevProps, currentProps) {
     .filter(isNewProp(prevProps, currentProps))
     .forEach(event => {
       const eventType = event.toLowerCase().substring(2);
-      document.removeEventListener(eventType, prevProps[event]);
+      dom.removeEventListener(eventType, prevProps[event]);
     });
 
   //add new or updated event listeners
@@ -105,7 +115,7 @@ function updateDom(dom, prevProps, currentProps) {
     .filter(isNewProp(prevProps, currentProps))
     .forEach(event => {
       const eventType = event.toLowerCase().substring(2);
-      document.addEventListener(eventType, currentProps[event]);
+      dom.addEventListener(eventType, currentProps[event]);
     });
 }
 
@@ -173,8 +183,6 @@ function updateFunctionComponent(fiber) {
 
 function useState(initial) {
   const hook = wipFiber.previous?.hooks?.[hookIndex] || { state: initial };
-
-  actionsShouldBeCalled = false;
 
   const setState = arg => {
     if (arg instanceof Function) {
@@ -273,20 +281,47 @@ const CustomReact = {
 
 /** @jsx CustomReact.createElement */
 function App({ title }) {
-  const [count, setCount] = useState(1);
   const [text, setText] = useState('initial text');
+  const [todos, setTodos] = useState([]);
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setTodos(state => [...state, { id: Date.now(), text }]);
+    setText('');
+  }
+
   return (
-    <div style="display:flex;flex-direction:column;gap:1em;align-items:flex-start;">
-      <button title={title} onClick={() => setCount(state => state + 1)}>
-        Counter: {count}
-      </button>
-      <input value={text} onInput={({ target: { value }}) => setText(value)} />
+    <div style="display:flex;flex-direction:column;gap:1em;align-items:flex-start;max-width:90%;margin:1rem auto;">
+      <h1>
+        { title }
+      </h1>
+      <form onSubmit={onSubmit}>
+        <input 
+          value={text} 
+          onInput={({ target: { value }}) => setText(value)} 
+          style="height:2em;border-radius:8px;padding:4px;box-sizing:border-box;"
+        />
+        <button 
+          type="submit"
+          style="height:2em;border-radius:8px;padding:4px;box-sizing:border-box;"
+        >
+          Add todo
+        </button>
+      </form>
+      { todos.map(item => <Item {...item} />) }
     </div>
   );
 } 
 
+function Item({ text }) {
+  return (
+    <li>{ text }</li>
+  );
+};
+
 CustomReact.render(
-  <App title="I am a title" />,
+  <App title="Todo list" />,
   document.querySelector('#root'),
 );
 
