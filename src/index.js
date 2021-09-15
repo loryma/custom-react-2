@@ -276,7 +276,7 @@ function App({ title }) {
   const [count, setCount] = useState(1);
   const [text, setText] = useState('initial text');
   return (
-    <div>
+    <div style="display:flex;flex-direction:column;gap:1em;align-items:flex-start;">
       <button title={title} onClick={() => setCount(state => state + 1)}>
         Counter: {count}
       </button>
