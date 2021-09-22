@@ -1,0 +1,4 @@
+Object.defineProperty(window, 'requestIdleCallback', {
+  writable: true,
+  value: jest.fn().mockImplementation(workLoop => ({})),
+});

@@ -141,12 +141,12 @@ function workLoop(deadline) {
     if (deadline.timeRemaining() < 1) shouldYield = true;
   }
 
-  requestIdleCallback(workLoop);
+  window.requestIdleCallback(workLoop);
 
   if (workInProgressRoot && !nextUnitOfWork) commitRoot();
 }
 
-requestIdleCallback(workLoop);
+window.requestIdleCallback(workLoop);
 
 function performUnitOfWork(fiber) {
   
